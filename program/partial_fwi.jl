@@ -1,8 +1,7 @@
-
 # using Optim
 # # reference: http://julianlsolvers.github.io/Optim.jl/stable/#
 
-# function penalty_fwi(vel_ex, vel0_ex, model, fre_vec; iterTime=10)
+# function partial_fwi(vel_ex, vel0_ex, model, fre_vec; iterTime=10)
 
 #     # Initialization
 #     Pr = make_projection_op(model);
@@ -23,10 +22,10 @@
 #         d = Pr * u;
 
 #         # setup function
-#         # f(x) = compute_misfit(x, model, fre, d, q, Pr)
-#         # g(x) = compute_gradient(x, model, fre, d, q, Pr)
-#         lambda = 1;
-#         func(x) = compute_gradient_penalty(x, model, fre, d, q, Pr, lambda);
+#         # f(x) = compute_misfit(x, model, fre, d, q, Pr);
+#         # g(x) = compute_gradient(x, model, fre, d, q, Pr);
+#         Nr, R = pivot_mat(model);
+#         func(x) = compute_gradient_partial(x, model, fre, d, q, Pr, Nr, R);
 #         f(x) = func(x)[1];
 #         g(x) = func(x)[2];
 
@@ -41,10 +40,11 @@
 # end
 
 
+
 using LBFGSB
 # reference: https://github.com/Gnimuc/LBFGSB.jl
 
-function penalty_fwi(vel_ex, vel0_ex, model, fre_vec, lower, upper, lambda; iterTime=10)
+function partial_fwi(vel_ex, vel0_ex, model, fre_vec, lower, upper, lambda; iterTime=10)
 
     # Initialization
     Pr = make_projection_op(model);
@@ -76,14 +76,12 @@ function penalty_fwi(vel_ex, vel0_ex, model, fre_vec, lower, upper, lambda; iter
         d = Pr * u;
 
         # setup function
-        # f(x) = compute_misfit(x, model, fre, d, q, Pr);
-        # g(x) = compute_gradient(x, model, fre, d, q, Pr);
-        # func(x) = f(x), g(x);
-        # func(x) = compute_gradient_lbfgsb(x, model, fre, d, q, Pr);
-        func(x) = compute_gradient_penalty(x, model, fre, d, q, Pr, lambda)
+
+        Nr, R = pivot_mat(model);
+        func(x) = compute_gradient_partial(x, model, fre, d, q, Pr, Nr, R)
 
         # Optimization
-        fout, xout = optimizer(func, x0, bounds, m=5, factr=1e12, pgtol=1e-10, iprint=1, maxfun=10000, maxiter=iterTime)
+        fout, xout = optimizer(func, x0, bounds, m=5, factr=1e7, pgtol=1e-10, iprint=1, maxfun=10000, maxiter=iterTime)
 
         # update
         x0 = copy(xout);
